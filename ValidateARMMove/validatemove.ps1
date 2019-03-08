@@ -45,8 +45,8 @@ function Get-LongRunningResult($endpoint, $headers)
     return $result
 }
 
-$sourceResourceGroupName="Chevron-FS"
-$targetResourceGroupName="Operations"
+$sourceResourceGroupName="CNIRG"
+$targetResourceGroupName="CNITestRG"
 
 $context = Get-AzureRmContext
 
