@@ -36,13 +36,54 @@ function Get-LongRunningResult($endpoint, $headers)
 {        
     do
     {
-        $result = Invoke-WebRequest $endpoint -Method Get -Headers $headers -ContentType "application/json" -Verbose
+        Write-Host "." -NoNewline
+    
+        $result = Invoke-WebRequest $endpoint -Method Get -Headers $headers -ContentType "application/json" #-Verbose
         if($result.StatusCode -eq 202)
         {
             Start-Sleep $result.Headers["Retry-After"]               
         }
-    }while($result.StatusCode -eq 202)
+    } while($result.StatusCode -eq 202)
+    if ($result.StatusCode -eq 204) 
+    { 
+        $result="Passed Validation"
+    }
     return $result
+
+}
+
+function Invoke-ValidateMoveRESTAPI($sourceResourceGroupName, $targetResourceGroupName, $subscriptionId)
+{
+    #Get all top-level resources
+    $resourceIds = Get-AzureRmResource -ResourceGroupName $sourceResourceGroupName | ?{$_.ParentResource -eq $null} | Select -Property ResourceId
+
+    $request = ""
+    foreach($resourceId in $resourceIds)
+    {    
+        $request += "`"" + $resourceId.ResourceId + "`","
+    }
+
+    $request = $request.Remove($request.Length -1, 1)
+
+    $token=Get-AzureRmCachedAccessToken $context
+
+    $body="{`"resources`": [$request],`"targetResourceGroup`":`"$targetResourceGroupId`"}"
+    $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
+    $headers.Add("Authorization", "bearer $token")
+
+    $endpoint="https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$sourceResourceGroupName/validateMoveResources?api-version=2018-05-01"
+
+    $response = $null
+    try
+    {
+        $response = Invoke-WebRequest $endpoint -Method Post -Headers $headers -Body $body -ContentType "application/json" #-Verbose
+        Process-ResponseStatus $response $headers
+    }
+    catch
+    {
+        return $_.ErrorDetails.Message
+    }
+
 }
 
 $sourceResourceGroupName="CNIRG"
@@ -50,37 +91,24 @@ $targetResourceGroupName="CNITestRG"
 
 $context = Get-AzureRmContext
 
-$subscriptionId = $context.Subscription
+$subscriptionId = $context.Subscription.SubscriptionId
 $targetResourceGroupId="/subscriptions/$subscriptionId/resourceGroups/$targetResourceGroupName"
 
-#Get all top-level resources
-$resourceIds = Get-AzureRmResource -ResourceGroupName $sourceResourceGroupName | ?{$_.ParentResource -eq $null} | Select -Property ResourceId
+#try
+#{
+    Get-Date
+    Write-Host "Processing" $sourceResourceGroupName -NoNewline
+    $response = Invoke-ValidateMoveRESTAPI $sourceResourceGroupName $targetResourceGroupName $subscriptionId 
+    Write-Host
+    $response
+    Get-Date
+      
+#}
+#catch
+#{
+ #   $_
+#}
 
-$request = ""
-foreach($resourceId in $resourceIds)
-{    
-    $request += "`"" + $resourceId.ResourceId + "`","
-}
 
-$request = $request.Remove($request.Length -1, 1)
-
-$token=Get-AzureRmCachedAccessToken $context
-
-$body="{`"resources`": [$request],`"targetResourceGroup`":`"$targetResourceGroupId`"}"
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("Authorization", "bearer $token")
-
-$endpoint="https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$sourceResourceGroupName/validateMoveResources?api-version=2018-05-01"
-
-$response = $null
-try
-{
-    $response = Invoke-WebRequest $endpoint -Method Post -Headers $headers -Body $body -ContentType "application/json" -Verbose
-    Process-ResponseStatus $response $headers
-}
-catch
-{
-    $_
-}
 
 
