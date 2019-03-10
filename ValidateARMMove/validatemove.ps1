@@ -115,14 +115,12 @@ function DoIt()
     Get-AzureRmResourceGroup | Select ResourceGroupName | FT
     $targetResourceGroupName = Read-Host -Prompt "Enter the name of target resource group"
     
-    Get-Date -DisplayHint DateTime
-    Write-Host
+    Get-Date
+         
     Write-Host "Validating" $sourceResourceGroupName -NoNewline
     $response = Invoke-ValidateMoveRESTAPI $sourceResourceGroupName $targetResourceGroupName $targetsubscriptionid $context
-    Write-Host
     $response
-    Write-Host
-    Get-Date -DisplayHint DateTime
+    Get-Date
 }
 
 DoIt
