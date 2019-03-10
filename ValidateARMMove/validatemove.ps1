@@ -46,13 +46,13 @@ function Get-LongRunningResult($endpoint, $headers)
     } while($result.StatusCode -eq 202)
     if ($result.StatusCode -eq 204) 
     { 
-        $result="Passed Validation"
+        $result="  Validation Successful"
     }
     return $result
 
 }
 
-function Invoke-ValidateMoveRESTAPI($sourceResourceGroupName, $targetResourceGroupName, $subscriptionId)
+function Invoke-ValidateMoveRESTAPI($sourceResourceGroupName, $targetResourceGroupName, $subscriptionId, $context)
 {
     #Get all top-level resources
     $resourceIds = Get-AzureRmResource -ResourceGroupName $sourceResourceGroupName | ?{$_.ParentResource -eq $null} | Select -Property ResourceId
@@ -66,6 +66,8 @@ function Invoke-ValidateMoveRESTAPI($sourceResourceGroupName, $targetResourceGro
     $request = $request.Remove($request.Length -1, 1)
 
     $token=Get-AzureRmCachedAccessToken $context
+
+    $targetResourceGroupId="/subscriptions/$subscriptionId/resourceGroups/$targetResourceGroupName"
 
     $body="{`"resources`": [$request],`"targetResourceGroup`":`"$targetResourceGroupId`"}"
     $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
@@ -86,29 +88,41 @@ function Invoke-ValidateMoveRESTAPI($sourceResourceGroupName, $targetResourceGro
 
 }
 
-$sourceResourceGroupName="CNIRG"
-$targetResourceGroupName="CNITestRG"
+function DoIt()
+{
+    $sourceResourceGroupName="CNITestRG"
+    $targetResourceGroupName="CNIRG"
+    $subscriptionId = $context.Subscription.SubscriptionId
 
-$context = Get-AzureRmContext
+    Write-Host "Use the Sign-In window to logon to your subscription"
+    Write-Host "NOTE: The Sign-In window may be hidden behind other windows" -ForegroundColor Red
+    Write-Host
 
-$subscriptionId = $context.Subscription.SubscriptionId
-$targetResourceGroupId="/subscriptions/$subscriptionId/resourceGroups/$targetResourceGroupName"
+    $context = Connect-AzureRmAccount -SkipContextPopulation
+    $context = Get-AzureRmContext
 
-#try
-#{
-    Get-Date
-    Write-Host "Processing" $sourceResourceGroupName -NoNewline
-    $response = Invoke-ValidateMoveRESTAPI $sourceResourceGroupName $targetResourceGroupName $subscriptionId 
+    Get-AzureRmSubscription | Select Name, Id | FT
+    $subscriptionid = Read-Host -Prompt "Enter the subscriptionid of the subscription of source resource group"
+    $null = Get-AzureRmSubscription -SubscriptionId $subscriptionId
+
+    Get-AzureRmResourceGroup | Select ResourceGroupName | FT
+    $sourceResourceGroupName = Read-Host -Prompt "Enter the name of source resource group"
+     
+    Get-AzureRmSubscription | Select Name, Id | FT
+    $targetSubscriptionid = Read-Host -Prompt "Enter the subscriptionid of the subscription of target resource group"
+    $null = Get-AzureRmSubscription -SubscriptionId $targetSubscriptionId
+
+    Get-AzureRmResourceGroup | Select ResourceGroupName | FT
+    $targetResourceGroupName = Read-Host -Prompt "Enter the name of target resource group"
+    
+    Get-Date -DisplayHint DateTime
+    Write-Host
+    Write-Host "Validating" $sourceResourceGroupName -NoNewline
+    $response = Invoke-ValidateMoveRESTAPI $sourceResourceGroupName $targetResourceGroupName $targetsubscriptionid $context
     Write-Host
     $response
-    Get-Date
-      
-#}
-#catch
-#{
- #   $_
-#}
+    Write-Host
+    Get-Date -DisplayHint DateTime
+}
 
-
-
-
+DoIt
