@@ -129,7 +129,4 @@ function DoIt()
 
 DoIt
 
-##TODO:  Need to refactor Invoke-ValidateMoveRESTAPI to take subscriptionid and targetsubscriptionid and build the 
-##       REST API call appropriately
-##       Also need to make sure the we set are handling the context correctly...
-##
+
