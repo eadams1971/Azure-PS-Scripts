@@ -120,10 +120,13 @@ function DoIt()
 
     Write-Output ("{0}" -f (Get-Date))
     
+    Write-Host
     Write-Host "Validating move of " $sourceResourceGroupName " to " $targetResourceGroupName -NoNewline
+    
     $response = Invoke-ValidateMoveRESTAPI $sourceResourceGroupName $sourcesubscriptionid $targetResourceGroupName $targetSubscriptionid $context
     $response
-    Get-Date -DisplayHint DateTime
+    
+    Write-Output ("{0}" -f (Get-Date))
     
 }
 
